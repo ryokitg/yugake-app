@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -711,22 +712,137 @@ function buildConfirm(){
   ['f_middle','f_ring','f_index','f_thumb','t_middle','t_ring','t_index','t_thumb','h_width','h_around','h_length','h_wrist'].forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.textContent=cm(k);});
 }
 
-// ===== PDF生成（サーバーサイド・日本語対応） =====
+// ===== PDF生成（注文票スタイル・jsPDF） =====
 async function generatePDF(formData, ref, annotatedImgSrc) {
-  const res = await fetch('/api/generate-pdf', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      data: { ...formData, ref },
-      image: annotatedImgSrc || null
-    })
+  return new Promise(resolve => {
+    if (window.jspdf) {
+      buildPDF(formData, ref, annotatedImgSrc, resolve);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = () => buildPDF(formData, ref, annotatedImgSrc, resolve);
+    document.head.appendChild(s);
   });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error);
-  const bytes = Uint8Array.from(atob(json.pdf), c => c.charCodeAt(0));
-  const blob = new Blob([bytes], {type: 'application/pdf'});
-  return URL.createObjectURL(blob);
 }
+
+function buildPDF(formData, ref, annotatedImgSrc, resolve) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p','mm','a4');
+  const W=210, H=297;
+  const navy=[15,30,70], gold=[180,145,60], white=[255,255,255];
+  const dark=[20,25,40], gray=[100,110,130], light=[240,243,250];
+  const red=[180,20,20], blue=[13,38,140], green=[13,140,50];
+
+  // 寸→cm変換
+  const toCm = v => v && v!=='—' ? (parseFloat(v)*3.03).toFixed(1) : '—';
+  const fmt = v => v && v!=='—' ? v+'寸（'+toCm(v)+'cm）' : '—';
+
+  // ===== PAGE1: 注文票スタイル =====
+  // 上部ボーダー
+  doc.setFillColor(210,200,185); doc.rect(0,0,W,2,'F');
+
+  // タイトル
+  doc.setTextColor(...dark); doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text('御  手  型', W*0.33, 16, {align:'center'});
+
+  // 会社名
+  doc.setFontSize(13); doc.text('大 洋 弓 具', W-12, 12, {align:'right'});
+  doc.setFontSize(6); doc.setFont('helvetica','normal');
+  doc.setTextColor(...gray);
+  doc.text('株式会社大洋弓具製作所', W-12, 17, {align:'right'});
+  doc.text('〒006-0022 北海道札幌市手稲区手稲本町', W-12, 21, {align:'right'});
+  doc.text('2条4丁目8-1杉本ビル202  Tel (011)681-8420', W-12, 25, {align:'right'});
+
+  // 区切り線
+  doc.setDrawColor(...dark); doc.setLineWidth(0.6);
+  doc.line(12, 27, W-12, 27);
+
+  // お客様情報
+  doc.setTextColor(...gray); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text('所属', 12, 33);
+  doc.text('御氏名', 12, 41);
+  doc.setTextColor(...dark); doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+  doc.text(formData.belong||'—', 22, 33);
+  doc.text((formData.name||'—')+'  '+formData.gender+'・（'+formData.age+'才）', 22, 41);
+  doc.setLineWidth(0.4); doc.setDrawColor(150,150,150);
+  doc.line(20, 34, 110, 34); doc.line(20, 42, 120, 42);
+
+  // 右側情報
+  const rx = W*0.6;
+  doc.setTextColor(...gray); doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+  doc.text('身長', rx, 31); doc.text('cm  体重', rx+14, 31);
+  doc.text('弓力', rx, 37); doc.text('kg  '+formData.string, rx+11, 37);
+  doc.text('受注', rx, 43); doc.text('年    月    日', rx+9, 43);
+  doc.text('仕上予定', rx, 49); doc.text('年    月    日', rx+14, 49);
+  doc.setTextColor(...dark); doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+  doc.text(formData.height||'', rx+7, 31);
+  doc.text(formData.weight||'', rx+30, 31);
+  doc.text(formData.strength||'', rx+7, 37);
+
+  doc.setDrawColor(...dark); doc.setLineWidth(0.5);
+  doc.line(12, 52, W-12, 52);
+
+  // ===== 手の写真エリア =====
+  const photoX=12, photoY=54, photoW=W-24, photoH=130;
+  if (annotatedImgSrc && annotatedImgSrc.startsWith('data:image')) {
+    try {
+      doc.addImage(annotatedImgSrc,'JPEG',photoX,photoY,photoW,photoH,undefined,'FAST');
+    } catch(e) {
+      doc.setFillColor(...light); doc.roundedRect(photoX,photoY,photoW,photoH,2,2,'F');
+      doc.setTextColor(...gray); doc.setFontSize(9);
+      doc.text('写真未撮影', W/2, photoY+photoH/2, {align:'center'});
+    }
+  } else {
+    doc.setFillColor(...light); doc.roundedRect(photoX,photoY,photoW,photoH,2,2,'F');
+    doc.setTextColor(...gray); doc.setFontSize(9);
+    doc.text('写真未撮影', W/2, photoY+photoH/2, {align:'center'});
+  }
+
+  // ===== 測定値（写真下） =====
+  let my = photoY+photoH+6;
+  doc.setDrawColor(...dark); doc.setLineWidth(0.4);
+  doc.line(12, my, W-12, my);
+  my+=5;
+
+  const cw=(W-24)/3;
+  const groups=[
+    ['指の長さ（寸/cm）',[['中指',formData.f_middle],['薬指',formData.f_ring],['人差し指',formData.f_index],['親指',formData.f_thumb]]],
+    ['指の太さ（寸/cm）',[['中指 第二関節',formData.t_middle],['薬指 第二関節',formData.t_ring],['人差し指 第二関節',formData.t_index],['親指 関節',formData.t_thumb]]],
+    ['手全体（寸/cm）',[['手の幅',formData.h_width],['手の周囲',formData.h_around],['手の平の長さ',formData.h_length],['手首の太さ',formData.h_wrist]]],
+  ];
+  groups.forEach(([gname,items],gi)=>{
+    const x=12+gi*cw;
+    doc.setFillColor(...navy); doc.rect(x,my,cw-1,5.5,'F');
+    doc.setTextColor(...white); doc.setFontSize(7); doc.setFont('helvetica','bold');
+    doc.text(gname,x+1,my+4);
+    items.forEach(([lbl,val],ji)=>{
+      const yy=my+6+ji*10;
+      doc.setTextColor(...gray); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+      doc.text(lbl,x+1,yy+3);
+      doc.setTextColor(...dark); doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.text(fmt(val),x+1,yy+9);
+      doc.setDrawColor(210,215,225); doc.setLineWidth(0.15);
+      doc.line(x,yy+10,x+cw-2,yy+10);
+    });
+  });
+
+  // 受付番号・日付
+  doc.setDrawColor(...dark); doc.setLineWidth(0.4);
+  doc.line(12,H-14,W-12,H-14);
+  doc.setTextColor(...gray); doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.text('受付番号: '+ref+'   受注日: '+(formData.date||'')+'   弓手: '+formData.bowhand, 12, H-9);
+  doc.text('※数値はAI測定', W-12, H-9, {align:'right'});
+
+  // 下部ボーダー
+  doc.setFillColor(210,200,185); doc.rect(0,H-5,W,5,'F');
+
+  const blob = doc.output('blob');
+  resolve(URL.createObjectURL(blob));
+}
+
+// ===== 旧PDF関数（互換性のため残す） =====
+async function generatePDFOld
 
 async function submitForm(){
   document.getElementById('loading').classList.add('show');
