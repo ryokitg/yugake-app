@@ -1574,10 +1574,8 @@
         });
         const data=await res.json();
         if(data.error)throw new Error(data.error);
-        const raw=data.content.map(b=>b.text||'').join('');
-        const m=raw.match(/\{[\s\S]*?\}/);
-        if(!m)throw new Error('解析結果が取得できませんでした');
-        const p=JSON.parse(m[0]);
+        const p=data.result;
+        if(!p)throw new Error('解析結果が取得できませんでした');
 
         ['f_middle','f_ring','f_index','f_thumb','t_middle','t_ring','t_index','t_thumb','h_width','h_around','h_length','h_wrist'].forEach(k=>{const el=document.getElementById(k);if(el&&p[k])el.value=p[k];});
         document.getElementById('ai-note').textContent=p.note||'—';
@@ -1717,3 +1715,4 @@
     </script>
 </body>
 </html>
+
