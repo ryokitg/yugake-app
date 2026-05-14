@@ -261,6 +261,44 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
         <div class="retake-bar"><button class="retake-btn" onclick="retake()">📷 撮り直す</button></div>
       </div>
     </div>
+
+    <!-- 側面写真セクション（上面写真撮影後に表示） -->
+    <div id="side-photo-section" style="display:none">
+      <div id="side-cam-wrap" style="display:none">
+        <div class="cam-wrap">
+          <video id="side-video" autoplay playsinline muted style="width:100%;max-height:50vh;object-fit:cover;display:block"></video>
+        </div>
+        <div class="cam-bottom">
+          <button class="shutter" id="side-shutter" onclick="sideCapture()"><div class="shutter-inner"></div></button>
+          <div class="cam-note">手の側面（親指が上）が写るよう構えて撮影</div>
+        </div>
+        <button class="btn-ghost" onclick="closeSideCam()">✕ カメラを閉じる</button>
+      </div>
+      <div id="side-upload-wrap">
+        <div class="card">
+          <div class="card-title"><div class="card-icon">📐</div>側面写真（厚み計測）<span style="font-size:11px;color:var(--green);margin-left:8px;font-weight:400">推奨</span></div>
+          <div class="card-desc">指の厚みと手の平の厚みをAIで自動計測します。方眼紙の前で手の側面を撮影してください。</div>
+          <div class="guide-steps">
+            <div class="guide-step"><div class="guide-num">1</div>方眼紙を縦に立てて背景に置く（または平らな面に置いてカメラを横に構える）</div>
+            <div class="guide-step"><div class="guide-num">2</div><strong style="color:var(--gold)">親指が上</strong>になるよう手を横向きにして方眼紙に添える</div>
+            <div class="guide-step"><div class="guide-num">3</div>指を<strong style="color:var(--gold)">自然に揃えた状態</strong>で力を抜き、横から撮影</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="btn-gold" onclick="openSideCam()">📷 側面写真を撮影</button>
+            <label style="width:100%;padding:13px;background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:12px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Noto Sans JP',sans-serif;box-sizing:border-box">
+              🖼️ カメラロールから選択
+              <input type="file" accept="image/*" id="side-file-input" onchange="onSideFile(event)" style="display:none">
+            </label>
+            <button class="btn-ghost" onclick="skipSidePhoto()" style="margin-top:0">⏭️ スキップ（厚みは手動で入力）</button>
+          </div>
+        </div>
+        <div class="preview-box" id="side-preview-box" style="display:none">
+          <img id="side-preview-img" src="" alt="側面写真">
+          <div class="retake-bar"><button class="retake-btn" onclick="retakeSide()">📷 撮り直す</button></div>
+        </div>
+      </div>
+    </div>
+
     <button class="btn-gold" id="btn-next2" style="display:none" onclick="goPage(3)">次へ → AIで測定する ›</button>
     <button class="btn-ghost" onclick="goPage(1)">← 戻る</button>
   </div>
@@ -319,6 +357,23 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
         <div class="mfield"><div><div class="mfield-label">親指 関節の太さ</div></div><div style="display:flex;align-items:center;gap:6px"><input type="number" class="mfield-input" id="t_thumb" placeholder="—" min="2" max="10" step="0.1"><div class="mfield-unit">cm</div></div></div>
       </div>
     </div>
+    <div class="mgroup">
+      <div class="mgroup-title">📐 指の厚み（側面写真AI測定 または 手動入力）</div>
+      <div class="guide-hint">📌 側面写真を撮影した場合はAIが自動入力します。未撮影の場合は、定規を指の横に当てて前後の厚みを測ってください。</div>
+      <div class="mgroup-items">
+        <div class="mfield"><div><div class="mfield-label">中指の厚み</div></div><div style="display:flex;align-items:center;gap:6px"><input type="number" class="mfield-input" id="tk_middle" placeholder="—" min="0.5" max="5" step="0.1"><div class="mfield-unit">cm</div></div></div>
+        <div class="mfield"><div><div class="mfield-label">薬指の厚み</div></div><div style="display:flex;align-items:center;gap:6px"><input type="number" class="mfield-input" id="tk_ring" placeholder="—" min="0.5" max="5" step="0.1"><div class="mfield-unit">cm</div></div></div>
+        <div class="mfield"><div><div class="mfield-label">人差し指の厚み</div></div><div style="display:flex;align-items:center;gap:6px"><input type="number" class="mfield-input" id="tk_index" placeholder="—" min="0.5" max="5" step="0.1"><div class="mfield-unit">cm</div></div></div>
+        <div class="mfield"><div><div class="mfield-label">親指の厚み</div></div><div style="display:flex;align-items:center;gap:6px"><input type="number" class="mfield-input" id="tk_thumb" placeholder="—" min="0.5" max="5" step="0.1"><div class="mfield-unit">cm</div></div></div>
+      </div>
+    </div>
+    <div class="mgroup">
+      <div class="mgroup-title">📐 手の平の厚み（側面写真AI測定 または 手動入力）</div>
+      <div class="guide-hint">📌 手の平の最も厚い部分（親指の付け根付近）の前後方向の厚みを測ってください。</div>
+      <div class="mgroup-items">
+        <div class="mfield"><div><div class="mfield-label">手の平の厚み（最厚部）</div></div><div style="display:flex;align-items:center;gap:6px"><input type="number" class="mfield-input" id="pk_thickness" placeholder="—" min="1" max="8" step="0.1"><div class="mfield-unit">cm</div></div></div>
+      </div>
+    </div>
     <button class="btn-gold" onclick="goPage(5)">次へ → 内容確認・送信 ›</button>
     <button class="btn-ghost" onclick="goPage(3)">← 戻る</button>
   </div>
@@ -355,6 +410,14 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
       <div class="confirm-row"><div class="confirm-label">手の平の長さ</div><div class="confirm-value num" id="c-h_length">—</div></div>
       <div class="confirm-row"><div class="confirm-label">手首の太さ</div><div class="confirm-value num" id="c-h_wrist">—</div></div>
     </div>
+    <div class="confirm-group">
+      <div class="confirm-group-title">📐 厚み計測</div>
+      <div class="confirm-row"><div class="confirm-label">中指の厚み</div><div class="confirm-value num" id="c-tk_middle">—</div></div>
+      <div class="confirm-row"><div class="confirm-label">薬指の厚み</div><div class="confirm-value num" id="c-tk_ring">—</div></div>
+      <div class="confirm-row"><div class="confirm-label">人差し指の厚み</div><div class="confirm-value num" id="c-tk_index">—</div></div>
+      <div class="confirm-row"><div class="confirm-label">親指の厚み</div><div class="confirm-value num" id="c-tk_thumb">—</div></div>
+      <div class="confirm-row"><div class="confirm-label">手の平の厚み</div><div class="confirm-value num" id="c-pk_thickness">—</div></div>
+    </div>
     <div class="note-box">
       <div class="note-box-title">📝 備考・ご要望</div>
       <textarea id="note" placeholder="測定で不安な点、ご要望など" rows="3" style="margin-top:8px;font-size:13px"></textarea>
@@ -385,7 +448,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
 
 <script>
 const S={gender:'男',string:'',bowhand:''};
-let capturedB64=null,gridStream=null,gridAnim=null,gridCDTimer=null,gridCounting=false,gridCDVal=0;
+let capturedB64=null,capturedSideB64=null,gridStream=null,sideStream=null,gridAnim=null,gridCDTimer=null,gridCounting=false,gridCDVal=0;
 
 function sel(key,val,el){S[key]=val;el.closest('.radio-group').querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');}
 
@@ -570,14 +633,18 @@ function onFile(e){
 function setPreview(dataUrl){
   document.getElementById('preview-img').src=dataUrl;
   document.getElementById('preview-box').style.display='block';
+  document.getElementById('side-photo-section').style.display='block';
   document.getElementById('btn-next2').style.display='flex';
 }
 
 function retake(){
-  capturedB64=null;
+  capturedB64=null;capturedSideB64=null;
   document.getElementById('preview-box').style.display='none';
   document.getElementById('btn-next2').style.display='none';
+  document.getElementById('side-photo-section').style.display='none';
+  document.getElementById('side-preview-box').style.display='none';
   document.getElementById('file-input').value='';
+  document.getElementById('side-file-input').value='';
 }
 
 async function doAnalyze(){
@@ -587,20 +654,23 @@ async function doAnalyze(){
   document.getElementById('err-analyze').classList.remove('show');
   document.getElementById('result-wrap').style.display='none';
 
-  const prompt=`あなたは弓道のユガケ製作のプロ職人アシスタントです。方眼紙（1mmグリッド・5mm中線・10mm太線）の上に手の甲を上に向けて置いた画像です。中央の●印（ここをあわせる）に中指の付け根が合わせられています。カラーの矢印線を参考に、グリッドのマス目を1mm単位で丁寧に数えて実寸をcm（小数点1桁）で計算してください。JSONのみで返答（他テキスト不要）：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"note":"AI所見30文字以内"}`;
+  const hasSide = !!capturedSideB64;
+  const prompt = hasSide
+    ? `あなたは弓道のユガケ製作のプロ職人アシスタントです。1枚目は方眼紙（1mmグリッド）の上に手の甲を上に向けて置いた上面写真、2枚目は同じ方眼紙を背景に手を横から撮った側面写真です。1枚目から指の長さ・手の大きさを、2枚目から指の厚みと手の平の厚みをグリッドで1mm単位で計測してください。JSONのみで返答（他テキスト不要）：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"tk_middle":1.5,"tk_ring":1.4,"tk_index":1.4,"tk_thumb":1.8,"pk_thickness":2.5,"note":"AI所見30文字以内"}`
+    : `あなたは弓道のユガケ製作のプロ職人アシスタントです。方眼紙（1mmグリッド・5mm中線・10mm太線）の上に手の甲を上に向けて置いた画像です。中央の●印（ここをあわせる）に中指の付け根が合わせられています。カラーの矢印線を参考に、グリッドのマス目を1mm単位で丁寧に数えて実寸をcm（小数点1桁）で計算してください。JSONのみで返答（他テキスト不要）：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"note":"AI所見30文字以内"}`;
 
   try{
     const res=await fetch('/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:capturedB64,prompt:prompt})
+      body:JSON.stringify({image:capturedB64,...(capturedSideB64?{image_side:capturedSideB64}:{}),prompt:prompt})
     });
     const data=await res.json();
     if(data.error)throw new Error(data.error);
     const p=data.result;
     if(!p)throw new Error('解析結果が取得できませんでした');
 
-    ['f_middle','f_ring','f_index','f_thumb','t_middle','t_ring','t_index','t_thumb','h_width','h_around','h_length','h_wrist'].forEach(k=>{
+    ['f_middle','f_ring','f_index','f_thumb','t_middle','t_ring','t_index','t_thumb','h_width','h_around','h_length','h_wrist','tk_middle','tk_ring','tk_index','tk_thumb','pk_thickness'].forEach(k=>{
       const el=document.getElementById(k);
       if(el && p[k]) el.value = p[k];
     });
@@ -613,6 +683,11 @@ async function doAnalyze(){
       {icon:'👍',name:'親指の長さ',desc:'付け根〜指先',key:'f_thumb'},
       {icon:'↔️',name:'手の幅',desc:'横の最大幅',key:'h_width'},
       {icon:'📏',name:'手の平の長さ',desc:'縦の長さ',key:'h_length'},
+      ...(p.tk_middle?[
+        {icon:'📐',name:'中指の厚み',desc:'前後方向の厚さ',key:'tk_middle'},
+        {icon:'📐',name:'薬指の厚み',desc:'前後方向の厚さ',key:'tk_ring'},
+        {icon:'📐',name:'手の平の厚み',desc:'最厚部の厚さ',key:'pk_thickness'},
+      ]:[]),
     ];
     document.getElementById('mlist').innerHTML=items.map(it=>`<div class="mitem"><div class="mitem-icon">${it.icon}</div><div class="mitem-info"><div class="mitem-name">${it.name}</div><div class="mitem-desc">${it.desc}</div></div><div class="mitem-val"><div class="mitem-num">${p[it.key]||'—'}</div><div class="mitem-unit">cm</div><div class="mitem-conf">● 高精度</div></div></div>`).join('');
 
@@ -720,10 +795,73 @@ function buildConfirm(){
   document.getElementById('c-gender').textContent=S.gender+' ／ '+g('age')+'歳';
   document.getElementById('c-body').textContent=g('height')+'cm ／ '+g('weight')+'kg';
   document.getElementById('c-bow').textContent=g('strength')+'kg ／ '+S.string;
-  ['f_middle','f_ring','f_index','f_thumb','t_middle','t_ring','t_index','t_thumb','h_width','h_around','h_length','h_wrist'].forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.textContent=cm(k);});
+  ['f_middle','f_ring','f_index','f_thumb','t_middle','t_ring','t_index','t_thumb','h_width','h_around','h_length','h_wrist','tk_middle','tk_ring','tk_index','tk_thumb','pk_thickness'].forEach(k=>{const el=document.getElementById('c-'+k);if(el)el.textContent=cm(k);});
 }
 
 // ===== PDF生成（注文票スタイル・jsPDF） =====
+// ===== 側面カメラ =====
+async function openSideCam(){
+  try{
+    sideStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+    document.getElementById('side-video').srcObject=sideStream;
+    await document.getElementById('side-video').play();
+    document.getElementById('side-cam-wrap').style.display='block';
+    document.getElementById('side-upload-wrap').style.display='none';
+  }catch(e){showErr('カメラへのアクセスが許可されていません。カメラロールから選択してください。');}
+}
+
+function closeSideCam(){
+  if(sideStream){sideStream.getTracks().forEach(t=>t.stop());sideStream=null;}
+  document.getElementById('side-cam-wrap').style.display='none';
+  document.getElementById('side-upload-wrap').style.display='block';
+}
+
+function sideCapture(){
+  const video=document.getElementById('side-video');
+  const MAX=900;let w=video.videoWidth,h=video.videoHeight;
+  if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d').drawImage(video,0,0,w,h);
+  const dataUrl=c.toDataURL('image/jpeg',0.82);
+  capturedSideB64=dataUrl.split(',')[1];
+  setSidePreview(dataUrl);
+  closeSideCam();
+}
+
+function onSideFile(e){
+  const file=e.target.files[0];if(!file)return;
+  if(file.size>15*1024*1024){showErr('ファイルが大きすぎます。カメラ設定で画質を下げてください。');return;}
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    const MAX=900;let w=img.width,h=img.height;
+    if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const dataUrl=c.toDataURL('image/jpeg',0.82);
+    capturedSideB64=dataUrl.split(',')[1];
+    setSidePreview(dataUrl);
+  };
+  img.src=url;
+}
+
+function setSidePreview(dataUrl){
+  document.getElementById('side-preview-img').src=dataUrl;
+  document.getElementById('side-preview-box').style.display='block';
+}
+
+function retakeSide(){
+  capturedSideB64=null;
+  document.getElementById('side-preview-box').style.display='none';
+  document.getElementById('side-file-input').value='';
+}
+
+function skipSidePhoto(){
+  capturedSideB64=null;
+  document.getElementById('side-photo-section').style.display='none';
+}
+
 async function generatePDF(formData, ref, annotatedImgSrc) {
   return new Promise(resolve => {
     if (window.jspdf) {
@@ -821,6 +959,7 @@ function buildPDF(formData, ref, annotatedImgSrc, resolve) {
     ['指の長さ（寸/cm）',[['中指',formData.f_middle],['薬指',formData.f_ring],['人差し指',formData.f_index],['親指',formData.f_thumb]]],
     ['指の太さ（寸/cm）',[['中指 第二関節',formData.t_middle],['薬指 第二関節',formData.t_ring],['人差し指 第二関節',formData.t_index],['親指 関節',formData.t_thumb]]],
     ['手全体（寸/cm）',[['手の幅',formData.h_width],['手の周囲',formData.h_around],['手の平の長さ',formData.h_length],['手首の太さ',formData.h_wrist]]],
+    ['厚み（cm）',[['中指の厚み',formData.tk_middle],['薬指の厚み',formData.tk_ring],['人差し指の厚み',formData.tk_index],['手の平の厚み',formData.pk_thickness]]],
   ];
   groups.forEach(([gname,items],gi)=>{
     const x=12+gi*cw;
@@ -856,7 +995,7 @@ async function submitForm(){
   document.getElementById('loading').classList.add('show');
   const g=id=>document.getElementById(id)?.value||'—';
   const ref='YGK-'+(Math.floor(Math.random()*900000)+100000);
-  const body={受付番号:ref,'---お客様情報---':'---',所属:g('belong'),お名前:g('name'),弓手:S.bowhand,性別:S.gender,年齢:g('age')+'歳',身長:g('height')+'cm',体重:g('weight')+'kg',弓力:g('strength')+'kg',弦の種類:S.string,予算:g('budget')||'未記入','---指の長さ---':'---',中指:g('f_middle')+'cm',薬指:g('f_ring')+'cm',人差し指:g('f_index')+'cm',親指:g('f_thumb')+'cm','---指の太さ---':'---',中指第二関節:g('t_middle')+'cm',薬指第二関節:g('t_ring')+'cm',人差し指第二関節:g('t_index')+'cm',親指関節:g('t_thumb')+'cm','---手全体---':'---',手の幅:g('h_width')+'cm',手の周囲:g('h_around')+'cm',手の平の長さ:g('h_length')+'cm',手首の太さ:g('h_wrist')+'cm',備考:g('note')||'なし'};
+  const body={受付番号:ref,'---お客様情報---':'---',所属:g('belong'),お名前:g('name'),弓手:S.bowhand,性別:S.gender,年齢:g('age')+'歳',身長:g('height')+'cm',体重:g('weight')+'kg',弓力:g('strength')+'kg',弦の種類:S.string,予算:g('budget')||'未記入','---指の長さ---':'---',中指:g('f_middle')+'cm',薬指:g('f_ring')+'cm',人差し指:g('f_index')+'cm',親指:g('f_thumb')+'cm','---指の太さ---':'---',中指第二関節:g('t_middle')+'cm',薬指第二関節:g('t_ring')+'cm',人差し指第二関節:g('t_index')+'cm',親指関節:g('t_thumb')+'cm','---手全体---':'---',手の幅:g('h_width')+'cm',手の周囲:g('h_around')+'cm',手の平の長さ:g('h_length')+'cm',手首の太さ:g('h_wrist')+'cm','---厚み---':'---',中指厚み:g('tk_middle')+'cm',薬指厚み:g('tk_ring')+'cm',人差し指厚み:g('tk_index')+'cm',親指厚み:g('tk_thumb')+'cm',手の平厚み:g('pk_thickness')+'cm',備考:g('note')||'なし'};
   try{
     const res=await fetch('https://formspree.io/f/mzdyqvjz',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});
     if(!res.ok)throw new Error('送信エラー');
@@ -874,6 +1013,8 @@ async function submitForm(){
       f_middle:g('f_middle'), f_ring:g('f_ring'), f_index:g('f_index'), f_thumb:g('f_thumb'),
       t_middle:g('t_middle'), t_ring:g('t_ring'), t_index:g('t_index'), t_thumb:g('t_thumb'),
       h_width:g('h_width'), h_around:g('h_around'), h_length:g('h_length'), h_wrist:g('h_wrist'),
+      tk_middle:g('tk_middle'), tk_ring:g('tk_ring'), tk_index:g('tk_index'), tk_thumb:g('tk_thumb'),
+      pk_thickness:g('pk_thickness'),
       note:g('note'), date:new Date().toLocaleDateString('ja-JP'),
     };
     try {
