@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sachiko Kunimatsu — Artist Portfolio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+:root {
+  --black: #0a0a0a;
+  --white: #f5f5f5;
+  --gray: #888;
+  --border: rgba(255,255,255,0.08);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 48px;
+  mix-blend-mode: difference;
+}
+
+.nav-logo {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 36px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--white);
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.nav-links a:hover { opacity: 1; }
+
+/* ── HERO ── */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 48px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-bg-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(120px, 22vw, 280px);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,255,255,0.05);
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+.hero-tag {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-size: clamp(52px, 9vw, 120px);
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  margin-bottom: 40px;
+}
+
+.hero-title em {
+  font-style: normal;
+  display: block;
+  -webkit-text-stroke: 1px var(--white);
+  color: transparent;
+}
+
+.hero-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hero-desc {
+  max-width: 320px;
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.7;
+  color: var(--gray);
+}
+
+.hero-scroll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+.scroll-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, var(--gray));
+  animation: scrollLine 2s ease-in-out infinite;
+}
+
+@keyframes scrollLine {
+  0%, 100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.2); }
+}
+
+/* ── DIVIDER ── */
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 48px;
+}
+
+/* ── ABOUT ── */
+#about {
+  padding: 120px 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.about-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-label::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  background: var(--gray);
+}
+
+.about-heading {
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 32px;
+}
+
+.about-text {
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.8;
+  color: var(--gray);
+  margin-bottom: 16px;
+}
+
+.about-right {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.stat-card {
+  background: var(--black);
+  padding: 40px 32px;
+}
+
+.stat-num {
+  font-size: 52px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--gray);
+  letter-spacing: 0.05em;
+}
+
+/* ── WORKS ── */
+#works {
+  padding: 120px 48px;
+}
+
+.works-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 64px;
+}
+
+.works-heading {
+  font-size: clamp(36px, 4vw, 56px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.works-count {
+  font-size: 13px;
+  color: var(--gray);
+  letter-spacing: 0.05em;
+}
+
+.works-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.work-card {
+  position: relative;
+  aspect-ratio: 4/3;
+  background: #111;
+  overflow: hidden;
+  cursor: pointer;
+  group: true;
+}
+
+.work-card:first-child {
+  grid-column: 1 / -1;
+  aspect-ratio: 16/7;
+}
+
+.work-card-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px;
+  transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+
+.work-card:hover .work-card-inner {
+  transform: scale(1.02);
+}
+
+.work-card-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  transition: opacity 0.4s;
+}
+
+.work-card:nth-child(2) .work-card-bg { background: linear-gradient(135deg, #151515 0%, #0a0a0a 100%); }
+.work-card:nth-child(3) .work-card-bg { background: linear-gradient(135deg, #121212 0%, #0e0e0e 100%); }
+
+.work-card-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #fff 0px, #fff 1px,
+    transparent 1px, transparent 20px
+  );
+  transition: opacity 0.4s;
+}
+
+.work-card:hover .work-card-pattern { opacity: 0.08; }
+
+.work-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%);
+}
+
+.work-meta {
+  position: relative;
+  z-index: 1;
+}
+
+.work-tag {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 10px;
+}
+
+.work-title {
+  font-size: clamp(22px, 2.5vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.work-desc {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--gray);
+  max-width: 480px;
+}
+
+.work-arrow {
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.work-card:hover .work-arrow {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── CONTACT ── */
+#contact {
+  padding: 120px 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: start;
+}
+
+.contact-left {}
+
+.contact-heading {
+  font-size: clamp(42px, 5vw, 72px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  margin-bottom: 32px;
+}
+
+.contact-heading span {
+  display: block;
+  -webkit-text-stroke: 1px var(--white);
+  color: transparent;
+}
+
+.contact-text {
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--gray);
+  line-height: 1.7;
+  margin-bottom: 48px;
+}
+
+.contact-links {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contact-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 500;
+  transition: padding-left 0.3s;
+}
+
+.contact-link:hover { padding-left: 12px; }
+
+.contact-link-arrow { color: var(--gray); }
+
+.contact-right {}
+
+.form-group {
+  margin-bottom: 28px;
+}
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin-bottom: 10px;
+}
+
+.form-input, .form-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding: 12px 0;
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--white);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus, .form-textarea:focus {
+  border-color: var(--white);
+}
+
+.form-textarea {
+  resize: none;
+  height: 120px;
+}
+
+.form-input::placeholder, .form-textarea::placeholder {
+  color: rgba(255,255,255,0.2);
+}
+
+.form-submit {
+  width: 100%;
+  padding: 18px;
+  background: var(--white);
+  color: var(--black);
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, color 0.2s;
+  margin-top: 8px;
+}
+
+.form-submit:hover {
+  background: transparent;
+  color: var(--white);
+  outline: 1px solid var(--white);
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 40px 48px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--gray);
+  letter-spacing: 0.05em;
+}
+
+/* ── CURSOR ── */
+.cursor {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: var(--white);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.1s;
+  mix-blend-mode: difference;
+}
+
+.cursor-ring {
+  position: fixed;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transition: transform 0.15s, width 0.3s, height 0.3s, opacity 0.3s;
+  mix-blend-mode: difference;
+}
+
+.cursor-ring.hover {
+  width: 64px;
+  height: 64px;
+  opacity: 0.6;
+}
+
+/* ── REVEAL ANIMATION ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; }
+  .nav-links { display: none; }
+
+  #hero { padding: 0 24px 60px; }
+  .hero-bg-text { font-size: 100px; }
+  .hero-bottom { flex-direction: column; align-items: flex-start; gap: 32px; }
+  .hero-scroll { display: none; }
+
+  .section-divider { margin: 0 24px; }
+
+  #about { grid-template-columns: 1fr; padding: 80px 24px; gap: 48px; }
+  .about-right { grid-template-columns: 1fr 1fr; }
+
+  #works { padding: 80px 24px; }
+  .works-grid { grid-template-columns: 1fr; }
+  .work-card:first-child { aspect-ratio: 4/3; }
+
+  #contact { grid-template-columns: 1fr; padding: 80px 24px; gap: 60px; }
+
+  footer { padding: 32px 24px; flex-direction: column; gap: 12px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#hero" class="nav-logo">SKunimatsu</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#works">Works</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg-text">CREATE</div>
+
+  <div class="hero-tag reveal">Artist — Based in Japan</div>
+
+  <h1 class="hero-title reveal">
+    国松<br>
+    <em>紗智子</em>
+  </h1>
+
+  <div class="hero-bottom reveal">
+    <p class="hero-desc">
+      素材と空間の対話を通じて、<br>
+      記憶と感覚の境界を問い続けるアーティスト。
+    </p>
+    <div class="hero-scroll">
+      <div class="scroll-line"></div>
+      <span>Scroll</span>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-left reveal">
+    <div class="about-label">About</div>
+    <h2 class="about-heading">国松<br>紗智子</h2>
+    <p class="about-text">
+      素材の物性と人間の知覚の関係を探求し、
+      インスタレーション・彫刻・映像など多様なメディアで制作活動を行うアーティスト。
+    </p>
+    <p class="about-text">
+      日常の中に潜む見えない力学を可視化し、
+      観る者が自らの感覚と向き合う空間を創り出す。
+    </p>
+  </div>
+  <div class="about-right reveal">
+    <div class="stat-card">
+      <div class="stat-num">10+</div>
+      <div class="stat-label">Years Active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">30+</div>
+      <div class="stat-label">Exhibitions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">15+</div>
+      <div class="stat-label">Countries</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">Curiosity</div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- WORKS -->
+<section id="works">
+  <div class="works-header reveal">
+    <h2 class="works-heading">Selected<br>Works</h2>
+    <span class="works-count">( 03 Projects )</span>
+  </div>
+
+  <div class="works-grid">
+    <div class="work-card reveal">
+      <div class="work-card-bg"></div>
+      <div class="work-card-pattern"></div>
+      <div class="work-overlay"></div>
+      <div class="work-arrow">↗</div>
+      <div class="work-card-inner">
+        <div class="work-meta">
+          <div class="work-tag">Installation · 2024</div>
+          <h3 class="work-title">Threshold of Memory</h3>
+          <p class="work-desc">廃工場の空間に白い布と光を用いたサイトスペシフィック・インスタレーション。記憶と忘却の狭間を物質化した大型作品。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="work-card reveal">
+      <div class="work-card-bg"></div>
+      <div class="work-card-pattern"></div>
+      <div class="work-overlay"></div>
+      <div class="work-arrow">↗</div>
+      <div class="work-card-inner">
+        <div class="work-meta">
+          <div class="work-tag">Sculpture · 2023</div>
+          <h3 class="work-title">Gravity Residue</h3>
+          <p class="work-desc">鉄と和紙を組み合わせた彫刻シリーズ。重力に抗う素材の意志と、時間による変容を探る。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="work-card reveal">
+      <div class="work-card-bg"></div>
+      <div class="work-card-pattern"></div>
+      <div class="work-overlay"></div>
+      <div class="work-arrow">↗</div>
+      <div class="work-card-inner">
+        <div class="work-meta">
+          <div class="work-tag">Video · 2022</div>
+          <h3 class="work-title">Invisible Cartography</h3>
+          <p class="work-desc">地形と身体の関係をテーマにした映像インスタレーション。土地の記憶を音と映像で編み直す試み。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-left reveal">
+    <h2 class="contact-heading">
+      Let's<br>
+      <span>Work</span><br>
+      Together.
+    </h2>
+    <p class="contact-text">
+      展覧会・コラボレーション・作品に関するお問い合わせは<br>
+      以下よりお気軽にご連絡ください。
+    </p>
+    <div class="contact-links">
+      <a href="mailto:hello@example.com" class="contact-link">
+        hello@example.com
+        <span class="contact-link-arrow">→</span>
+      </a>
+      <a href="#" class="contact-link">
+        Twitter / X
+        <span class="contact-link-arrow">→</span>
+      </a>
+      <a href="#" class="contact-link">
+        GitHub
+        <span class="contact-link-arrow">→</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="contact-right reveal">
+    <form onsubmit="handleSubmit(event)">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input type="text" class="form-input" placeholder="Your name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" placeholder="your@email.com" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-textarea" placeholder="Tell me about your project..."></textarea>
+      </div>
+      <button type="submit" class="form-submit">Send Message</button>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>© 2024 Sachiko Kunimatsu. All rights reserved.</span>
+  <span>国松紗智子 — Artist</span>
+</footer>
+
+<script>
+/* Custom cursor */
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursorRing');
+let mouseX = 0, mouseY = 0;
+let ringX = 0, ringY = 0;
+
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursor.style.left = mouseX - 4 + 'px';
+  cursor.style.top = mouseY - 4 + 'px';
+});
+
+function animateCursor() {
+  ringX += (mouseX - ringX) * 0.12;
+  ringY += (mouseY - ringY) * 0.12;
+  cursorRing.style.left = ringX - 20 + 'px';
+  cursorRing.style.top = ringY - 20 + 'px';
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+document.querySelectorAll('a, button, .work-card').forEach(el => {
+  el.addEventListener('mouseenter', () => cursorRing.classList.add('hover'));
+  el.addEventListener('mouseleave', () => cursorRing.classList.remove('hover'));
+});
+
+/* Scroll reveal */
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+reveals.forEach(el => observer.observe(el));
+
+/* Form */
+function handleSubmit(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('.form-submit');
+  btn.textContent = 'Sent ✓';
+  btn.style.background = 'transparent';
+  btn.style.color = 'var(--white)';
+  btn.style.outline = '1px solid var(--white)';
+  btn.disabled = true;
+}
+</script>
+</body>
+</html>
