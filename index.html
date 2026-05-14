@@ -118,6 +118,14 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
 .loading-t{font-family:'Zen Kaku Gothic New',sans-serif;font-size:16px;color:var(--gold);letter-spacing:.1em}
 .loading-s{font-size:12px;color:var(--text-dim)}
 .dl-btn{display:none;width:100%;padding:12px;background:rgba(201,168,76,0.1);border:1px solid var(--gold-border);border-radius:10px;color:var(--gold);font-size:13px;text-align:center;text-decoration:none;font-family:'Noto Sans JP',sans-serif;margin-bottom:14px;cursor:pointer}
+#modal-3d{display:none;position:fixed;inset:0;background:#0d0d1a;z-index:1001;flex-direction:column}
+.m3d-hdr{display:flex;align-items:center;padding:14px 20px;background:rgba(0,0,0,0.5);border-bottom:1px solid rgba(201,168,76,0.3);flex-shrink:0}
+.m3d-title{color:var(--gold);font-family:'Zen Kaku Gothic New',sans-serif;font-size:16px;font-weight:700;flex:1}
+.m3d-close{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#canvas-3d{flex:1;width:100%;overflow:hidden;touch-action:none}
+.m3d-info{padding:10px 20px;color:rgba(255,255,255,0.45);font-size:11px;text-align:center;flex-shrink:0;background:rgba(0,0,0,0.4)}
+.m3d-vals{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:8px 20px;background:rgba(0,0,0,0.3)}
+.m3d-val{color:var(--gold);font-size:11px;font-weight:700}
 </style>
 </head>
 <body>
@@ -321,6 +329,7 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
         <div id="mlist"></div>
       </div>
       <div class="note-box"><div class="note-box-title">🤖 AI所見</div><div id="ai-note">—</div></div>
+      <button class="btn-outline" onclick="show3D()" style="margin-bottom:10px">🖐️ 3Dモデルで手形を確認する</button>
       <button class="btn-gold" onclick="goPage(4)">次へ → 寸法を確認・追記 ›</button>
       <button class="btn-ghost" onclick="goPage(2)">← 撮り直す</button>
     </div>
@@ -440,6 +449,17 @@ input::placeholder,textarea::placeholder{color:var(--text-dim);opacity:.5}
   </div>
 </div>
 
+<!-- 3D モーダル -->
+<div id="modal-3d">
+  <div class="m3d-hdr">
+    <div class="m3d-title">🖐️ 手形 3Dモデル</div>
+    <button class="m3d-close" onclick="close3D()">✕</button>
+  </div>
+  <div id="m3d-vals" class="m3d-vals"></div>
+  <div id="canvas-3d"></div>
+  <div class="m3d-info">ドラッグで回転 ／ ピンチで拡大縮小</div>
+</div>
+
 <div class="loading" id="loading">
   <div class="spin"></div>
   <div class="loading-t">AI解析中...</div>
@@ -504,16 +524,18 @@ function startLevelMeter() {
   const text = document.getElementById('level-text');
   const ind  = document.getElementById('level-indicator');
   if (!ball) return;
+  let active = false;
 
   function handleOrientation(e) {
-    const beta  = e.beta  || 0;
-    const gamma = e.gamma || 0;
+    if (!active) return;
+    const beta  = (e.beta  != null) ? e.beta  : 90;
+    const gamma = (e.gamma != null) ? e.gamma : 0;
     const maxMove = 13;
     const bx = Math.max(-maxMove, Math.min(maxMove, gamma * 0.7));
-    const by = Math.max(-maxMove, Math.min(maxMove, (beta-90) * 0.7));
-    ball.style.left = (50 + bx/maxMove*45) + '%';
-    ball.style.top  = (50 + by/maxMove*45) + '%';
-    const ok = Math.abs(beta-90) < 6 && Math.abs(gamma) < 6;
+    const by = Math.max(-maxMove, Math.min(maxMove, (beta - 90) * 0.7));
+    ball.style.left = (50 + bx / maxMove * 45) + '%';
+    ball.style.top  = (50 + by / maxMove * 45) + '%';
+    const ok = Math.abs(beta - 90) < 8 && Math.abs(gamma) < 8;
     window._deviceIsLevel = ok;
     ball.style.background = ok ? '#4caf7d' : '#e05252';
     ball.style.boxShadow  = ok ? '0 0 8px #4caf7d' : 'none';
@@ -521,22 +543,31 @@ function startLevelMeter() {
   }
 
   function tryStart() {
+    active = true;
     window.addEventListener('deviceorientation', handleOrientation, true);
-    if (text) text.textContent = '計測中...';
+    if (text) text.textContent = '水平確認中...';
+    setTimeout(() => {
+      if (text && text.textContent === '水平確認中...') {
+        text.textContent = '非対応'; if (ind) ind.style.opacity = '0.4';
+      }
+    }, 2500);
   }
 
   if (typeof DeviceOrientationEvent !== 'undefined' &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
-    if (ind) { ind.style.cursor='pointer';
-      ind.onclick = () => {
-        DeviceOrientationEvent.requestPermission().then(r => {
-          if (r==='granted') { tryStart(); ind.onclick=null; }
-        }).catch(()=>{});
-      };
-    }
     if (text) text.textContent = 'タップで起動';
-  } else {
+    if (ind) {
+      ind.style.cursor = 'pointer';
+      ind.addEventListener('click', () => {
+        DeviceOrientationEvent.requestPermission()
+          .then(r => { if (r === 'granted') { tryStart(); ind.style.cursor = 'default'; } })
+          .catch(() => { if (text) text.textContent = '非対応'; });
+      }, { once: true });
+    }
+  } else if (typeof DeviceOrientationEvent !== 'undefined') {
     tryStart();
+  } else {
+    if (text) text.textContent = '非対応'; if (ind) ind.style.opacity = '0.4';
   }
 }
 
@@ -552,7 +583,7 @@ function startGridLoop(){
     const score=gridScore(ctx,canvas.width,canvas.height);
     updateGridUI(score,canvas.width,canvas.height,ctx);
     if(score>=70&&!gridCounting)startGridCD();
-    else if(score<55&&gridCounting)cancelGridCD();
+    else if(score<40&&gridCounting)cancelGridCD();
   }
   loop();
 }
@@ -573,8 +604,8 @@ function updateGridUI(score,w,h,ctx){
   const btn=document.getElementById('shutter-btn');
   let c,m;
   if(score>=70){c='#4caf7d';m='✓ 方眼紙を検出！自動撮影します...';btn.classList.add('ready');}
-  else if(score>=45){c='#e0a030';m='方眼紙に近づけてください';btn.classList.remove('ready');}
-  else{c='#e05252';m='方眼紙を探しています...';btn.classList.remove('ready');}
+  else if(score>=40){c='#e0a030';m='方眼紙全体が画面に入るよう距離を調整してください';btn.classList.remove('ready');}
+  else{c='#e05252';m='方眼紙が見つかりません — 明るい場所で真上から撮影してください';btn.classList.remove('ready');}
   dot.style.background=c;dot.style.boxShadow='0 0 8px '+c;msg.textContent=m;
   ctx.strokeStyle=score>=70?'rgba(76,175,125,0.8)':score>=45?'rgba(224,160,48,0.6)':'rgba(224,82,82,0.5)';
   ctx.lineWidth=3;
@@ -717,48 +748,81 @@ async function drawAnnotation(b64,m){
   return new Promise(resolve=>{
     const img=new Image();
     img.onload=()=>{
-      const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+      const panelW=Math.round(img.width*0.28);
+      const c=document.createElement('canvas');
+      c.width=img.width;c.height=img.height;
       const ctx=c.getContext('2d');ctx.drawImage(img,0,0);
       const w=img.width,h=img.height;
       const sc=Math.min(w,h)/900;
-      const fs=Math.max(16,Math.round(20*sc));
-      const lw=Math.max(2,Math.round(3*sc));
-      const aw=Math.max(8,Math.round(11*sc));
-      const cx=w*0.42,cy=h*0.5;
-      const pxCm=(w*0.38)/8.0;
+      const fs=Math.max(13,Math.round(16*sc));
+      const lw=Math.max(1.5,Math.round(2*sc));
+      const tk=Math.max(5,Math.round(7*sc));
 
-      function arrow(x1,y1,x2,y2,color,label){
-        ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=lw;
-        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-        [[x1,y1,x2,y2],[x2,y2,x1,y1]].forEach(([ax,ay,bx,by])=>{
-          const a=Math.atan2(by-ay,bx-ax);
-          ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ax+aw*Math.cos(a+0.4),ay+aw*Math.sin(a+0.4));ctx.lineTo(ax+aw*Math.cos(a-0.4),ay+aw*Math.sin(a-0.4));ctx.closePath();ctx.fill();
+      // 有効描画幅（右パネル除く）
+      const dw=w-panelW-10;
+      const cx=dw*0.44,cy=h*0.5;
+      const pxCm=(dw*0.36)/8.0;
+      const base=cy+h*0.05;
+
+      // 計測線（根元→指先）：ラベルを指の外側に配置
+      function measureLine(x,y1,y2,color,label,side){
+        ctx.strokeStyle=color;ctx.lineWidth=lw;
+        ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x,y2);ctx.stroke();
+        // 両端ティック
+        [y1,y2].forEach(y=>{
+          ctx.beginPath();ctx.moveTo(x-tk/2,y);ctx.lineTo(x+tk/2,y);ctx.stroke();
         });
-        const lx=(x1+x2)/2,ly=(y1+y2)/2;
+        // 先端矢印
+        ctx.fillStyle=color;
+        ctx.beginPath();ctx.moveTo(x,y1-tk*0.7);ctx.lineTo(x-tk*0.4,y1+tk*0.3);ctx.lineTo(x+tk*0.4,y1+tk*0.3);ctx.closePath();ctx.fill();
+        // ラベル（指の横）
         ctx.font='bold '+fs+'px sans-serif';
         const tw=ctx.measureText(label).width;
-        ctx.fillStyle='rgba(0,0,0,0.72)';ctx.fillRect(lx-tw/2-4,ly-fs-4,tw+8,fs+8);
-        ctx.fillStyle=color;ctx.textAlign='center';ctx.fillText(label,lx,ly-2);ctx.textAlign='left';
+        const lx2=side==='left'?x-tw-8:x+8;
+        const ly=(y1+y2)/2+fs*0.35;
+        ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(lx2-3,ly-fs,tw+6,fs+5);
+        ctx.fillStyle=color;ctx.textAlign='left';ctx.fillText(label,lx2,ly);
       }
 
-      const base=cy+h*0.05;
-      arrow(cx+w*0.20,base,cx+w*0.10,base-(m.f_thumb||6)*pxCm,'#e88a4a','親指 '+(m.f_thumb||'—')+'cm');
-      arrow(cx+w*0.07,base,cx+w*0.07,base-(m.f_index||7.5)*pxCm,'#64b5f6','人差 '+(m.f_index||'—')+'cm');
-      arrow(cx-w*0.03,base,cx-w*0.03,base-(m.f_middle||8)*pxCm,'#4caf7d','中指 '+(m.f_middle||'—')+'cm');
-      arrow(cx-w*0.13,base,cx-w*0.13,base-(m.f_ring||7.8)*pxCm*0.95,'#c9a84c','薬指 '+(m.f_ring||'—')+'cm');
-      const pw=(m.h_width||8)*pxCm;
-      arrow(cx-pw*0.35,base+pw*0.5,cx+pw*0.65,base+pw*0.5,'#e05252','手幅 '+(m.h_width||'—')+'cm');
-      arrow(cx-w*0.28,base,cx-w*0.28,base+(m.h_length||9.5)*pxCm,'#ab47bc','手平 '+(m.h_length||'—')+'cm');
+      // 各指の位置（指先が上方向）
+      measureLine(cx-w*0.14,base-(m.f_ring||7.8)*pxCm,base,'#c9a84c','薬 '+(m.f_ring||'—')+'cm','left');
+      measureLine(cx-w*0.03,base-(m.f_middle||8)*pxCm,base,'#4caf7d','中 '+(m.f_middle||'—')+'cm','left');
+      measureLine(cx+w*0.07,base-(m.f_index||7.5)*pxCm,base,'#64b5f6','人 '+(m.f_index||'—')+'cm','right');
+      // 親指：右端に分離して配置（手と重ならない）
+      const thumbX=dw*0.82;
+      measureLine(thumbX,base-(m.f_thumb||6)*pxCm,base,'#e88a4a','親 '+(m.f_thumb||'—')+'cm','right');
+      // 親指と手をコネクタ線で繋ぐ
+      ctx.strokeStyle='rgba(232,138,74,0.4)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(cx+w*0.20,base);ctx.lineTo(thumbX,base);ctx.stroke();
+      ctx.setLineDash([]);
 
-      // 右側パネル（白背景）
-      const panelW=Math.round(w*0.30);
-      ctx.fillStyle='rgba(255,255,255,0.90)';ctx.fillRect(w-panelW,0,panelW,h);
+      // 手幅
+      const pw=(m.h_width||8)*pxCm;
+      const wY=base+h*0.08;
+      ctx.strokeStyle='#e05252';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(cx-pw*0.38,wY);ctx.lineTo(cx+pw*0.62,wY);ctx.stroke();
+      [cx-pw*0.38,cx+pw*0.62].forEach(x=>{
+        ctx.beginPath();ctx.moveTo(x,wY-tk/2);ctx.lineTo(x,wY+tk/2);ctx.stroke();
+      });
+      ctx.font='bold '+fs+'px sans-serif';
+      const wl='手幅 '+(m.h_width||'—')+'cm';
+      const wtw=ctx.measureText(wl).width;
+      const wlx=(cx-pw*0.38+cx+pw*0.62)/2-wtw/2;
+      ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(wlx-3,wY-fs-4,wtw+6,fs+5);
+      ctx.fillStyle='#e05252';ctx.fillText(wl,wlx,wY-2);
+
+      // 手の平の長さ（左端）
+      const plx=cx-w*0.25;
+      measureLine(plx,base,base+(m.h_length||9.5)*pxCm,'#ab47bc','平 '+(m.h_length||'—')+'cm','left');
+
+      // 右側パネル
+      ctx.fillStyle='rgba(255,255,255,0.93)';ctx.fillRect(w-panelW,0,panelW,h);
       ctx.fillStyle='#c9a84c';ctx.fillRect(w-panelW,0,3,h);
       ctx.fillStyle='#1a1208';
       ctx.font='bold '+Math.round(fs*0.95)+'px sans-serif';
-      ctx.fillText('測定結果',w-panelW+12,fs*2);
+      ctx.fillText('測定結果',w-panelW+10,fs*2);
       ctx.strokeStyle='rgba(201,168,76,0.4)';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(w-panelW+10,fs*2.5);ctx.lineTo(w-8,fs*2.5);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(w-panelW+8,fs*2.5);ctx.lineTo(w-8,fs*2.5);ctx.stroke();
 
       const rows=[
         ['📏指の長さ',null],['中指',m.f_middle,'#4caf7d'],['薬指',m.f_ring,'#c9a84c'],
@@ -767,20 +831,21 @@ async function drawAnnotation(b64,m){
         ['手の平',m.h_length,'#ab47bc'],['手首',m.h_wrist,'#555'],
         ['🔵指の太さ',null],['中指2関節',m.t_middle,'#555'],['薬指2関節',m.t_ring,'#555'],
         ['人差2関節',m.t_index,'#555'],['親指関節',m.t_thumb,'#555'],
+        ...(m.tk_middle?[['📐厚み',null],['中指厚み',m.tk_middle,'#888'],['薬指厚み',m.tk_ring,'#888'],['手平厚み',m.pk_thickness,'#888']]:[]),
       ];
-      let y=fs*3.6;const lh=fs*1.6;const lx=w-panelW+12;
+      let py=fs*3.6;const lh=fs*1.6;const lx=w-panelW+10;
       rows.forEach(([label,val,color])=>{
-        if(val===null){ctx.fillStyle='rgba(201,168,76,0.8)';ctx.font='bold '+Math.round(fs*0.68)+'px sans-serif';ctx.fillText(label,lx,y);y+=lh*0.82;}
+        if(val===null){ctx.fillStyle='rgba(201,168,76,0.85)';ctx.font='bold '+Math.round(fs*0.65)+'px sans-serif';ctx.fillText(label,lx,py);py+=lh*0.8;}
         else{
-          ctx.fillStyle=color||'#555';ctx.font=Math.round(fs*0.68)+'px sans-serif';ctx.fillText(label,lx+4,y);
-          ctx.fillStyle=color||'#1a1208';ctx.font='bold '+Math.round(fs*0.82)+'px sans-serif';
-          ctx.textAlign='right';ctx.fillText(val?val+'cm':'—',w-8,y);ctx.textAlign='left';y+=lh;
+          ctx.fillStyle=color||'#555';ctx.font=Math.round(fs*0.65)+'px sans-serif';ctx.fillText(label,lx+4,py);
+          ctx.fillStyle=color||'#1a1208';ctx.font='bold '+Math.round(fs*0.78)+'px sans-serif';
+          ctx.textAlign='right';ctx.fillText(val?val+'cm':'—',w-8,py);ctx.textAlign='left';py+=lh;
         }
       });
       const d=new Date();
-      ctx.fillStyle='rgba(0,0,0,0.25)';ctx.font=Math.round(fs*0.55)+'px sans-serif';
+      ctx.fillStyle='rgba(0,0,0,0.25)';ctx.font=Math.round(fs*0.52)+'px sans-serif';
       ctx.fillText('大洋弓具 '+d.getFullYear()+'/'+(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0'),lx,h-10);
-      resolve(c.toDataURL('image/jpeg',0.93));
+      resolve(c.toDataURL('image/jpeg',0.92));
     };
     img.src='data:image/jpeg;base64,'+b64;
   });
@@ -862,30 +927,78 @@ function skipSidePhoto(){
   document.getElementById('side-photo-section').style.display='none';
 }
 
-async function generatePDF(formData, ref, annotatedImgSrc) {
-  return new Promise(resolve => {
-    if (window.jspdf) {
-      buildPDF(formData, ref, annotatedImgSrc, resolve);
-      return;
-    }
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    s.onload = () => buildPDF(formData, ref, annotatedImgSrc, resolve);
-    document.head.appendChild(s);
-  });
+// ===== カルテ印刷（HTML印刷方式・日本語対応） =====
+function openPrintKarte(formData, ref, annotatedImgSrc) {
+  const win = window.open('', '_blank');
+  if (!win) { alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。'); return; }
+  const cv = v => (v && v !== '—') ? v + ' cm' : '—';
+  const html = `<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>御手型カルテ ${ref}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP',sans-serif;background:#fff;color:#1a1208;padding:16px;max-width:640px;margin:0 auto}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #c9a84c;padding-bottom:12px;margin-bottom:16px}
+.htitle{font-size:22px;font-weight:900}.hsub{font-size:10px;color:#999;margin-top:2px}
+.ref{background:#c9a84c;color:#fff;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;white-space:nowrap;margin-top:4px}
+.photo{width:100%;border-radius:8px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.irow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.ic{border:1px solid #eee;border-radius:8px;padding:8px 12px}
+.il{font-size:9px;color:#999;margin-bottom:2px}.iv{font-size:13px;font-weight:700}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.card{border:1px solid #e8e0d0;border-radius:8px;overflow:hidden}
+.ct{background:rgba(201,168,76,.12);border-bottom:1px solid #e8e0d0;padding:6px 10px;font-size:11px;font-weight:700;color:#8b6914}
+.row{display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #f5f0ea;align-items:center}
+.row:last-child{border-bottom:none}.rl{font-size:10px;color:#999}.rv{font-size:13px;font-weight:700;color:#c9a84c}
+.btn{display:block;width:100%;padding:15px;background:#c9a84c;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin:20px 0;font-family:'Noto Sans JP',sans-serif}
+.ft{text-align:center;color:#bbb;font-size:10px;padding-top:12px;border-top:1px solid #eee}
+@media print{.btn{display:none}body{padding:0}}
+</style></head><body>
+<div class="hdr"><div><div class="htitle">御手型カルテ</div><div class="hsub">大洋弓具 ユガケオーダーメイド</div></div><div class="ref">${ref}</div></div>
+${annotatedImgSrc&&annotatedImgSrc.length>100?`<img class="photo" src="${annotatedImgSrc}" alt="測定写真">`:''}
+<div class="irow">
+  <div class="ic"><div class="il">お名前</div><div class="iv">${formData.name||'—'}</div></div>
+  <div class="ic"><div class="il">所属</div><div class="iv">${formData.belong||'—'}</div></div>
+  <div class="ic"><div class="il">弓手</div><div class="iv">${formData.bowhand||'—'}</div></div>
+  <div class="ic"><div class="il">弦・弓力・性別</div><div class="iv">${formData.string||'—'} / ${formData.strength||'—'}kg / ${formData.gender||'—'}</div></div>
+</div>
+<div class="g3">
+  <div class="card"><div class="ct">📏 指の長さ</div>
+    <div class="row"><span class="rl">中指</span><span class="rv">${cv(formData.f_middle)}</span></div>
+    <div class="row"><span class="rl">薬指</span><span class="rv">${cv(formData.f_ring)}</span></div>
+    <div class="row"><span class="rl">人差し指</span><span class="rv">${cv(formData.f_index)}</span></div>
+    <div class="row"><span class="rl">親指</span><span class="rv">${cv(formData.f_thumb)}</span></div></div>
+  <div class="card"><div class="ct">🔵 指の太さ</div>
+    <div class="row"><span class="rl">中指</span><span class="rv">${cv(formData.t_middle)}</span></div>
+    <div class="row"><span class="rl">薬指</span><span class="rv">${cv(formData.t_ring)}</span></div>
+    <div class="row"><span class="rl">人差し指</span><span class="rv">${cv(formData.t_index)}</span></div>
+    <div class="row"><span class="rl">親指</span><span class="rv">${cv(formData.t_thumb)}</span></div></div>
+  <div class="card"><div class="ct">✋ 手全体</div>
+    <div class="row"><span class="rl">手の幅</span><span class="rv">${cv(formData.h_width)}</span></div>
+    <div class="row"><span class="rl">手の周囲</span><span class="rv">${cv(formData.h_around)}</span></div>
+    <div class="row"><span class="rl">手の平</span><span class="rv">${cv(formData.h_length)}</span></div>
+    <div class="row"><span class="rl">手首</span><span class="rv">${cv(formData.h_wrist)}</span></div></div>
+</div>
+${(formData.tk_middle&&formData.tk_middle!=='—')?`<div class="g2">
+  <div class="card"><div class="ct">📐 指の厚み</div>
+    <div class="row"><span class="rl">中指</span><span class="rv">${cv(formData.tk_middle)}</span></div>
+    <div class="row"><span class="rl">薬指</span><span class="rv">${cv(formData.tk_ring)}</span></div>
+    <div class="row"><span class="rl">人差し指</span><span class="rv">${cv(formData.tk_index)}</span></div>
+    <div class="row"><span class="rl">親指</span><span class="rv">${cv(formData.tk_thumb)}</span></div></div>
+  <div class="card"><div class="ct">📐 手の平の厚み</div>
+    <div class="row"><span class="rl">最厚部</span><span class="rv">${cv(formData.pk_thickness)}</span></div></div>
+</div>`:''}
+${formData.note&&formData.note!=='—'?`<div class="card" style="margin-bottom:12px"><div class="ct">📝 備考</div><div style="padding:10px 12px;font-size:12px;line-height:1.7">${formData.note}</div></div>`:''}
+<button class="btn" onclick="window.print()">🖨️ 印刷 / PDF で保存</button>
+<div class="ft">受付番号: ${ref} ／ ${formData.date||''} ／ 大洋弓具株式会社</div>
+</body></html>`;
+  win.document.write(html); win.document.close();
 }
 
 function buildPDF(formData, ref, annotatedImgSrc, resolve) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p','mm','a4');
-  const W=210, H=297;
-  const navy=[15,30,70], gold=[180,145,60], white=[255,255,255];
-  const dark=[20,25,40], gray=[100,110,130], light=[240,243,250];
-  const red=[180,20,20], blue=[13,38,140], green=[13,140,50];
-
-  // 寸→cm変換
-  const toCm = v => v && v!=='—' ? (parseFloat(v)*3.03).toFixed(1) : '—';
-  const fmt = v => v && v!=='—' ? v+'寸（'+toCm(v)+'cm）' : '—';
+  resolve && resolve(null); return;
 
   // ===== PAGE1: 注文票スタイル =====
   // 上部ボーダー
@@ -991,6 +1104,114 @@ function buildPDF(formData, ref, annotatedImgSrc, resolve) {
   resolve(URL.createObjectURL(blob));
 }
 
+// ===== 3Dモデル =====
+let _3dRenderer=null,_3dAnimId=null;
+
+function show3D(){
+  const keys=['f_middle','f_ring','f_index','f_thumb','h_width','h_length','pk_thickness','tk_middle','tk_ring','tk_index','tk_thumb'];
+  const m={};
+  keys.forEach(k=>{const el=document.getElementById(k);m[k]=el?parseFloat(el.value)||0:0;});
+  document.getElementById('modal-3d').style.display='flex';
+  const vEl=document.getElementById('m3d-vals');
+  vEl.innerHTML=[
+    ['中指',m.f_middle,'cm'],['手幅',m.h_width,'cm'],['手長',m.h_length,'cm'],
+    ...(m.pk_thickness?[['手平厚',m.pk_thickness,'cm']]:[])]
+    .map(([l,v,u])=>v?`<span class="m3d-val">${l} <strong>${v}</strong>${u}</span>`:'').join('');
+  if(!window.THREE){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js';
+    s.onload=()=>build3D(m);document.head.appendChild(s);
+  }else{build3D(m);}
+}
+
+function close3D(){
+  document.getElementById('modal-3d').style.display='none';
+  if(_3dAnimId)cancelAnimationFrame(_3dAnimId);
+  if(_3dRenderer){
+    _3dRenderer.dispose();
+    const c=document.getElementById('canvas-3d');
+    while(c.firstChild)c.removeChild(c.firstChild);
+    _3dRenderer=null;
+  }
+}
+
+function build3D(m){
+  const container=document.getElementById('canvas-3d');
+  container.innerHTML='';
+  const W=container.clientWidth,H=container.clientHeight;
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x0d0d1a);
+  const camera=new THREE.PerspectiveCamera(42,W/H,0.1,200);
+  camera.position.set(0,6,28);camera.lookAt(0,2,0);
+  _3dRenderer=new THREE.WebGLRenderer({antialias:true});
+  _3dRenderer.setSize(W,H);_3dRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  container.appendChild(_3dRenderer.domElement);
+  scene.add(new THREE.AmbientLight(0xfff5e0,0.55));
+  const dl=new THREE.DirectionalLight(0xffffff,1.0);dl.position.set(6,14,10);scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0xffd0a0,0.4);dl2.position.set(-5,-5,6);scene.add(dl2);
+
+  const skin=new THREE.MeshStandardMaterial({color:0xf2c09c,roughness:0.8,metalness:0});
+  const hand=new THREE.Group();
+
+  const fw=m.h_width||8,fl=m.h_length||9,fthk=m.pk_thickness||2.5;
+  // 手の平
+  hand.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(fw,fl,fthk),skin),{castShadow:true}));
+
+  // 4本指
+  const fd=[
+    {x:fw*0.30,len:m.f_index||7.5,thk:m.tk_index||1.4},
+    {x:fw*0.10,len:m.f_middle||8.0,thk:m.tk_middle||1.5},
+    {x:-fw*0.10,len:m.f_ring||7.5,thk:m.tk_ring||1.4},
+    {x:-fw*0.32,len:(m.f_ring||7.5)*0.82,thk:(m.tk_ring||1.4)*0.82},
+  ];
+  fd.forEach(f=>{
+    const r=f.thk/2;
+    const fm=new THREE.Mesh(new THREE.CylinderGeometry(r*0.78,r,f.len,12),skin.clone());
+    fm.position.set(f.x,fl/2+f.len/2,0);hand.add(fm);
+    const km=new THREE.Mesh(new THREE.SphereGeometry(r*1.05,10,8),skin);
+    km.position.set(f.x,fl/2,0);hand.add(km);
+  });
+  // 親指
+  const tr=(m.tk_thumb||1.8)/2;
+  const tm=new THREE.Mesh(new THREE.CylinderGeometry(tr*0.75,tr,m.f_thumb||6.0,12),skin.clone());
+  tm.rotation.z=Math.PI/2.8;tm.position.set(fw*0.58,-fl*0.18,0);hand.add(tm);
+  // 手首
+  const wm=new THREE.Mesh(new THREE.CylinderGeometry(fw*0.36,fw*0.44,fl*0.28,16),skin);
+  wm.position.set(0,-fl/2-fl*0.14,0);hand.add(wm);
+
+  // グリッド
+  const grid=new THREE.GridHelper(40,20,0x222244,0x1a1a33);
+  grid.position.y=-fl/2-fl*0.28-1;scene.add(grid);
+  scene.add(hand);
+
+  // タッチ・マウス回転
+  let sx=0,sy=0,drag=false,rx=0.15,ry=0.3,zoom=28,lpd=0;
+  const cv=_3dRenderer.domElement;
+  cv.addEventListener('pointerdown',e=>{drag=true;sx=e.clientX;sy=e.clientY;});
+  cv.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    ry+=(e.clientX-sx)*0.012;rx+=(e.clientY-sy)*0.006;
+    rx=Math.max(-0.4,Math.min(1.0,rx));sx=e.clientX;sy=e.clientY;
+  });
+  cv.addEventListener('pointerup',()=>drag=false);
+  cv.addEventListener('touchmove',e=>{
+    if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      if(lpd)zoom=Math.max(14,Math.min(52,zoom-(d-lpd)*0.12));
+      lpd=d;e.preventDefault();
+    }
+  },{passive:false});
+  cv.addEventListener('touchend',()=>lpd=0);
+  cv.addEventListener('wheel',e=>{zoom=Math.max(14,Math.min(52,zoom+e.deltaY*0.05));},{passive:true});
+
+  (function animate(){
+    _3dAnimId=requestAnimationFrame(animate);
+    hand.rotation.y=ry;hand.rotation.x=rx;
+    camera.position.z=zoom;
+    _3dRenderer.render(scene,camera);
+  })();
+}
+
 async function submitForm(){
   document.getElementById('loading').classList.add('show');
   const g=id=>document.getElementById(id)?.value||'—';
@@ -1019,12 +1240,12 @@ async function submitForm(){
     };
     try {
       const annotatedSrc = document.getElementById('annotated-img')?.src || null;
-      const pdfUrl = await generatePDF(formData, ref, annotatedSrc);
       const dlBtn = document.getElementById('pdf-dl-btn');
-      dlBtn.href = pdfUrl;
-      dlBtn.download = '御手型カルテ_'+formData.name+'_'+ref+'.pdf';
+      dlBtn.onclick = () => openPrintKarte(formData, ref, annotatedSrc);
+      dlBtn.removeAttribute('href'); dlBtn.removeAttribute('download');
       dlBtn.style.display = 'flex';
-    } catch(e) { console.error('PDF生成エラー:', e); }
+      dlBtn.textContent = '📄 カルテを印刷・PDF保存';
+    } catch(e) { console.error('カルテ生成エラー:', e); }
   }catch(e){showErr('送信に失敗しました。もう一度お試しください。');}
   finally{document.getElementById('loading').classList.remove('show');}
 }
