@@ -687,8 +687,8 @@ async function doAnalyze(){
 
   const hasSide = !!capturedSideB64;
   const prompt = hasSide
-    ? `あなたは弓道のユガケ製作のプロ職人アシスタントです。1枚目は方眼紙（1mmグリッド）の上に手の甲を上に向けて置いた上面写真、2枚目は同じ方眼紙を背景に手を横から撮った側面写真です。1枚目から指の長さ・手の大きさを、2枚目から指の厚みと手の平の厚みをグリッドで1mm単位で計測してください。JSONのみで返答（他テキスト不要）：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"tk_middle":1.5,"tk_ring":1.4,"tk_index":1.4,"tk_thumb":1.8,"pk_thickness":2.5,"note":"AI所見30文字以内"}`
-    : `あなたは弓道のユガケ製作のプロ職人アシスタントです。方眼紙（1mmグリッド・5mm中線・10mm太線）の上に手の甲を上に向けて置いた画像です。中央の●印（ここをあわせる）に中指の付け根が合わせられています。カラーの矢印線を参考に、グリッドのマス目を1mm単位で丁寧に数えて実寸をcm（小数点1桁）で計算してください。JSONのみで返答（他テキスト不要）：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"note":"AI所見30文字以内"}`;
+    ? `あなたは弓道ユガケ製作の精密計測アシスタントです。画像1：方眼紙（1mm目盛・5mm中線・10mm太線）上に手の甲を上に向けて置いた上面写真。画像2：同じ方眼紙を背景に手を横から撮った側面写真。【計測手順】1.まず10mm太線の間隔でスケールを把握 2.掌指節（指の付け根の折れ目）から指先まで目盛りを数えてcm換算（小数点1桁） 3.手の幅は示指〜小指の掌指節を結ぶ最大幅 4.手の平の長さは手首折れ目から中指掌指節まで 5.手首・周囲は断面の推定周長 6.側面写真から各指の前後厚みと手の平最厚部を計測。JSONのみ返答：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"tk_middle":1.5,"tk_ring":1.4,"tk_index":1.4,"tk_thumb":1.8,"pk_thickness":2.5,"note":"計測特記事項30文字以内"}`
+    : `あなたは弓道ユガケ製作の精密計測アシスタントです。方眼紙（1mm目盛・5mm中線・10mm太線）上に手の甲を上に向けて置いた画像です。【計測定義】指の長さ=掌指節（付け根の折れ目）から指先。手の幅=示指〜小指の掌指節を結ぶ最大幅。手の平の長さ=手首折れ目から中指掌指節。指の太さ=第二関節での推定周長。手首の太さ=最も細い部分の推定周長。【手順】1.10mm太線でスケール確認 2.1mmマス目を丁寧に数えてcm換算（小数点1桁） 3.解剖学的に合理的か確認。JSONのみ返答：{"f_middle":8.2,"f_ring":7.8,"f_index":7.5,"f_thumb":6.2,"t_middle":5.8,"t_ring":5.5,"t_index":5.6,"t_thumb":6.8,"h_width":8.0,"h_around":19.5,"h_length":9.5,"h_wrist":14.5,"note":"計測特記事項30文字以内"}`;
 
   try{
     const res=await fetch('/api/analyze',{
@@ -927,73 +927,116 @@ function skipSidePhoto(){
   document.getElementById('side-photo-section').style.display='none';
 }
 
-// ===== カルテ印刷（HTML印刷方式・日本語対応） =====
+// ===== カルテ印刷（HTML印刷方式・プロ仕様） =====
 function openPrintKarte(formData, ref, annotatedImgSrc) {
   const win = window.open('', '_blank');
   if (!win) { alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。'); return; }
   const cv = v => (v && v !== '—') ? v + ' cm' : '—';
+  const hasVal = v => v && v !== '—';
+  const aiNote = document.getElementById('ai-note')?.textContent || '';
+  const hasThk = hasVal(formData.tk_middle);
+  const rows3 = (pairs) => pairs.map(([l,v]) => `<div class="mrow"><span class="ml">${l}</span><span class="mv${hasVal(v)?'':' nd'}">${cv(v)}</span></div>`).join('');
   const html = `<!DOCTYPE html><html lang="ja"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>御手型カルテ ${ref}</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans JP',sans-serif;background:#fff;color:#1a1208;padding:16px;max-width:640px;margin:0 auto}
-.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #c9a84c;padding-bottom:12px;margin-bottom:16px}
-.htitle{font-size:22px;font-weight:900}.hsub{font-size:10px;color:#999;margin-top:2px}
-.ref{background:#c9a84c;color:#fff;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;white-space:nowrap;margin-top:4px}
-.photo{width:100%;border-radius:8px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-.irow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.ic{border:1px solid #eee;border-radius:8px;padding:8px 12px}
-.il{font-size:9px;color:#999;margin-bottom:2px}.iv{font-size:13px;font-weight:700}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.card{border:1px solid #e8e0d0;border-radius:8px;overflow:hidden}
-.ct{background:rgba(201,168,76,.12);border-bottom:1px solid #e8e0d0;padding:6px 10px;font-size:11px;font-weight:700;color:#8b6914}
-.row{display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #f5f0ea;align-items:center}
-.row:last-child{border-bottom:none}.rl{font-size:10px;color:#999}.rv{font-size:13px;font-weight:700;color:#c9a84c}
-.btn{display:block;width:100%;padding:15px;background:#c9a84c;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin:20px 0;font-family:'Noto Sans JP',sans-serif}
-.ft{text-align:center;color:#bbb;font-size:10px;padding-top:12px;border-top:1px solid #eee}
-@media print{.btn{display:none}body{padding:0}}
-</style></head><body>
-<div class="hdr"><div><div class="htitle">御手型カルテ</div><div class="hsub">大洋弓具 ユガケオーダーメイド</div></div><div class="ref">${ref}</div></div>
-${annotatedImgSrc&&annotatedImgSrc.length>100?`<img class="photo" src="${annotatedImgSrc}" alt="測定写真">`:''}
-<div class="irow">
-  <div class="ic"><div class="il">お名前</div><div class="iv">${formData.name||'—'}</div></div>
-  <div class="ic"><div class="il">所属</div><div class="iv">${formData.belong||'—'}</div></div>
-  <div class="ic"><div class="il">弓手</div><div class="iv">${formData.bowhand||'—'}</div></div>
-  <div class="ic"><div class="il">弦・弓力・性別</div><div class="iv">${formData.string||'—'} / ${formData.strength||'—'}kg / ${formData.gender||'—'}</div></div>
+body{font-family:'Noto Sans JP',sans-serif;background:#f0ede8;color:#1a1208}
+.page{max-width:680px;margin:0 auto;background:#fff;box-shadow:0 0 24px rgba(0,0,0,0.12)}
+/* ── ヘッダー ── */
+.khdr{background:#1a1208;padding:18px 24px;display:flex;align-items:center;justify-content:space-between}
+.khtitle{font-family:'Noto Serif JP',serif;font-size:24px;font-weight:700;color:#c9a84c;letter-spacing:0.2em}
+.khsub{font-size:10px;color:rgba(255,255,255,0.4);margin-top:3px;letter-spacing:0.08em}
+.khr{text-align:right}
+.ref{display:inline-block;background:#c9a84c;color:#fff;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:0.12em;margin-bottom:4px}
+.kdate{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.05em}
+/* ── 写真 ── */
+.photo-wrap{background:#111;line-height:0;border-bottom:3px solid #c9a84c}
+.photo-wrap img{width:100%;max-height:320px;object-fit:contain;display:block;opacity:0.97}
+/* ── 顧客情報バンド ── */
+.info-band{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid #e8e0d0}
+.info-cell{padding:10px 16px;border-right:1px solid #e8e0d0}
+.info-cell:last-child{border-right:none}
+.info-cell:nth-child(n+4){border-top:1px solid #e8e0d0}
+.icl{font-size:9px;color:#aaa;margin-bottom:3px;letter-spacing:0.06em}
+.icv{font-size:13px;font-weight:700;color:#1a1208}
+/* ── キー計測値（大きく表示） ── */
+.key-section{background:#1a1208;padding:14px 20px}
+.key-label{font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:0.12em;margin-bottom:10px}
+.key-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.key-card{background:rgba(255,255,255,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:10px 12px;text-align:center}
+.key-name{font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:5px}
+.key-val{font-size:26px;font-weight:900;line-height:1}
+.key-unit{font-size:10px;margin-top:2px;opacity:0.5}
+.kc1{color:#4caf7d}.kc2{color:#c9a84c}.kc3{color:#64b5f6}
+/* ── 計測テーブル ── */
+.msection{padding:16px 20px 4px}
+.ms-title{font-size:9px;font-weight:700;color:#c9a84c;letter-spacing:0.12em;margin-bottom:10px}
+.mgrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.mgrid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.mcard{border:1px solid #e8e0d0;border-radius:8px;overflow:hidden}
+.mcard-hdr{background:rgba(201,168,76,0.08);border-bottom:1px solid #e8e0d0;padding:7px 12px;font-size:10px;font-weight:700;color:#8b6914;letter-spacing:0.05em}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-bottom:1px solid #f5f0ea}
+.mrow:last-child{border-bottom:none}
+.ml{font-size:10px;color:#888}
+.mv{font-size:15px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums}
+.mv.nd{color:#ccc;font-weight:400;font-size:12px}
+/* ── 備考・所見 ── */
+.note-section{padding:0 20px 16px}
+.note-card{background:#faf8f4;border:1px solid #e8e0d0;border-radius:8px;padding:12px 16px;margin-bottom:10px}
+.note-hdr{font-size:9px;font-weight:700;color:#c9a84c;letter-spacing:0.08em;margin-bottom:6px}
+.note-body{font-size:12px;color:#555;line-height:1.8}
+/* ── ボタン・フッター ── */
+.print-btn{display:block;margin:0 20px 20px;padding:15px;background:#c9a84c;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;text-align:center;font-family:'Noto Sans JP',sans-serif;letter-spacing:0.05em;width:calc(100% - 40px)}
+.kftr{background:#1a1208;color:rgba(255,255,255,0.3);font-size:9px;padding:10px 20px;text-align:center;letter-spacing:0.04em;line-height:1.8}
+@media print{
+  .print-btn{display:none}
+  body{background:#fff}
+  .page{box-shadow:none;max-width:100%}
+  .photo-wrap img{max-height:260px}
+}
+</style></head><body><div class="page">
+<div class="khdr">
+  <div><div class="khtitle">御手型カルテ</div><div class="khsub">大洋弓具　ユガケオーダーメイド注文票</div></div>
+  <div class="khr"><div class="ref">${ref}</div><div class="kdate">${formData.date||''}</div></div>
 </div>
-<div class="g3">
-  <div class="card"><div class="ct">📏 指の長さ</div>
-    <div class="row"><span class="rl">中指</span><span class="rv">${cv(formData.f_middle)}</span></div>
-    <div class="row"><span class="rl">薬指</span><span class="rv">${cv(formData.f_ring)}</span></div>
-    <div class="row"><span class="rl">人差し指</span><span class="rv">${cv(formData.f_index)}</span></div>
-    <div class="row"><span class="rl">親指</span><span class="rv">${cv(formData.f_thumb)}</span></div></div>
-  <div class="card"><div class="ct">🔵 指の太さ</div>
-    <div class="row"><span class="rl">中指</span><span class="rv">${cv(formData.t_middle)}</span></div>
-    <div class="row"><span class="rl">薬指</span><span class="rv">${cv(formData.t_ring)}</span></div>
-    <div class="row"><span class="rl">人差し指</span><span class="rv">${cv(formData.t_index)}</span></div>
-    <div class="row"><span class="rl">親指</span><span class="rv">${cv(formData.t_thumb)}</span></div></div>
-  <div class="card"><div class="ct">✋ 手全体</div>
-    <div class="row"><span class="rl">手の幅</span><span class="rv">${cv(formData.h_width)}</span></div>
-    <div class="row"><span class="rl">手の周囲</span><span class="rv">${cv(formData.h_around)}</span></div>
-    <div class="row"><span class="rl">手の平</span><span class="rv">${cv(formData.h_length)}</span></div>
-    <div class="row"><span class="rl">手首</span><span class="rv">${cv(formData.h_wrist)}</span></div></div>
+${annotatedImgSrc&&annotatedImgSrc.length>200?`<div class="photo-wrap"><img src="${annotatedImgSrc}" alt="測定写真"></div>`:''}
+<div class="info-band">
+  <div class="info-cell"><div class="icl">お名前</div><div class="icv">${formData.name||'—'}</div></div>
+  <div class="info-cell"><div class="icl">所属</div><div class="icv">${formData.belong||'—'}</div></div>
+  <div class="info-cell"><div class="icl">弓手</div><div class="icv">${formData.bowhand||'—'}</div></div>
+  <div class="info-cell"><div class="icl">性別・年齢</div><div class="icv">${formData.gender||'—'} ／ ${formData.age||'—'}歳</div></div>
+  <div class="info-cell"><div class="icl">弦・弓力</div><div class="icv">${formData.string||'—'} ／ ${formData.strength||'—'}kg</div></div>
+  <div class="info-cell"><div class="icl">身長・体重</div><div class="icv">${formData.height||'—'}cm ／ ${formData.weight||'—'}kg</div></div>
 </div>
-${(formData.tk_middle&&formData.tk_middle!=='—')?`<div class="g2">
-  <div class="card"><div class="ct">📐 指の厚み</div>
-    <div class="row"><span class="rl">中指</span><span class="rv">${cv(formData.tk_middle)}</span></div>
-    <div class="row"><span class="rl">薬指</span><span class="rv">${cv(formData.tk_ring)}</span></div>
-    <div class="row"><span class="rl">人差し指</span><span class="rv">${cv(formData.tk_index)}</span></div>
-    <div class="row"><span class="rl">親指</span><span class="rv">${cv(formData.tk_thumb)}</span></div></div>
-  <div class="card"><div class="ct">📐 手の平の厚み</div>
-    <div class="row"><span class="rl">最厚部</span><span class="rv">${cv(formData.pk_thickness)}</span></div></div>
-</div>`:''}
-${formData.note&&formData.note!=='—'?`<div class="card" style="margin-bottom:12px"><div class="ct">📝 備考</div><div style="padding:10px 12px;font-size:12px;line-height:1.7">${formData.note}</div></div>`:''}
-<button class="btn" onclick="window.print()">🖨️ 印刷 / PDF で保存</button>
-<div class="ft">受付番号: ${ref} ／ ${formData.date||''} ／ 大洋弓具株式会社</div>
-</body></html>`;
+<div class="key-section">
+  <div class="key-label">KEY MEASUREMENTS</div>
+  <div class="key-grid">
+    <div class="key-card"><div class="key-name">中指の長さ</div><div class="key-val kc1">${formData.f_middle||'—'}</div><div class="key-unit kc1">cm</div></div>
+    <div class="key-card"><div class="key-name">手の幅</div><div class="key-val kc2">${formData.h_width||'—'}</div><div class="key-unit kc2">cm</div></div>
+    <div class="key-card"><div class="key-name">薬指の長さ</div><div class="key-val kc3">${formData.f_ring||'—'}</div><div class="key-unit kc3">cm</div></div>
+  </div>
+</div>
+<div class="msection">
+  <div class="ms-title">MEASUREMENTS</div>
+  <div class="mgrid3">
+    <div class="mcard"><div class="mcard-hdr">📏 指の長さ</div>${rows3([['中指',formData.f_middle],['薬指',formData.f_ring],['人差し指',formData.f_index],['親指',formData.f_thumb]])}</div>
+    <div class="mcard"><div class="mcard-hdr">🔵 指の太さ</div>${rows3([['中指2関節',formData.t_middle],['薬指2関節',formData.t_ring],['人差2関節',formData.t_index],['親指関節',formData.t_thumb]])}</div>
+    <div class="mcard"><div class="mcard-hdr">✋ 手全体</div>${rows3([['手の幅',formData.h_width],['手の周囲',formData.h_around],['手の平',formData.h_length],['手首',formData.h_wrist]])}</div>
+  </div>
+  ${hasThk?`<div class="mgrid2">
+    <div class="mcard"><div class="mcard-hdr">📐 指の厚み（前後方向）</div>${rows3([['中指',formData.tk_middle],['薬指',formData.tk_ring],['人差し指',formData.tk_index],['親指',formData.tk_thumb]])}</div>
+    <div class="mcard"><div class="mcard-hdr">📐 手の平の厚み</div>${rows3([['最厚部（親指付け根）',formData.pk_thickness]])}<div style="padding:10px 12px;font-size:10px;color:#aaa;line-height:1.6">手の平を親指側から見たときの前後の最大厚み</div></div>
+  </div>`:''}
+</div>
+<div class="note-section">
+  ${formData.note&&hasVal(formData.note)?`<div class="note-card"><div class="note-hdr">📝 備考・ご要望</div><div class="note-body">${formData.note}</div></div>`:''}
+  ${aiNote&&aiNote!=='—'?`<div class="note-card"><div class="note-hdr">🤖 AI計測所見</div><div class="note-body">${aiNote}</div></div>`:''}
+</div>
+<button class="print-btn" onclick="window.print()">🖨️ 印刷 ／ PDF で保存する</button>
+<div class="kftr">受付番号: ${ref}　／　${formData.date||''}　／　大洋弓具株式会社<br>〒006-0022 北海道札幌市手稲区手稲本町2条4丁目8-1 杉本ビル202　Tel (011)681-8420</div>
+</div></body></html>`;
   win.document.write(html); win.document.close();
 }
 
@@ -1138,74 +1181,134 @@ function close3D(){
 function build3D(m){
   const container=document.getElementById('canvas-3d');
   container.innerHTML='';
-  const W=container.clientWidth,H=container.clientHeight;
+  const CW=container.clientWidth,CH=container.clientHeight;
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0x0d0d1a);
-  const camera=new THREE.PerspectiveCamera(42,W/H,0.1,200);
-  camera.position.set(0,6,28);camera.lookAt(0,2,0);
+  scene.fog=new THREE.Fog(0x0d0d1a,38,68);
+  const camera=new THREE.PerspectiveCamera(40,CW/CH,0.1,200);
+  camera.position.set(0,7,26);camera.lookAt(0,1,0);
   _3dRenderer=new THREE.WebGLRenderer({antialias:true});
-  _3dRenderer.setSize(W,H);_3dRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  _3dRenderer.setSize(CW,CH);_3dRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   container.appendChild(_3dRenderer.domElement);
-  scene.add(new THREE.AmbientLight(0xfff5e0,0.55));
-  const dl=new THREE.DirectionalLight(0xffffff,1.0);dl.position.set(6,14,10);scene.add(dl);
-  const dl2=new THREE.DirectionalLight(0xffd0a0,0.4);dl2.position.set(-5,-5,6);scene.add(dl2);
 
-  const skin=new THREE.MeshStandardMaterial({color:0xf2c09c,roughness:0.8,metalness:0});
+  scene.add(new THREE.AmbientLight(0xffeedd,0.5));
+  const dl=new THREE.DirectionalLight(0xffffff,1.2);dl.position.set(5,15,10);scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0xc0a080,0.4);dl2.position.set(-8,-3,8);scene.add(dl2);
+  const rl=new THREE.PointLight(0xffa060,0.5,30);rl.position.set(8,0,5);scene.add(rl);
+
+  const skinM=new THREE.MeshStandardMaterial({color:0xf0b088,roughness:0.78,metalness:0});
+  const darkM=new THREE.MeshStandardMaterial({color:0xd08060,roughness:0.85,metalness:0});
   const hand=new THREE.Group();
 
   const fw=m.h_width||8,fl=m.h_length||9,fthk=m.pk_thickness||2.5;
-  // 手の平
-  hand.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(fw,fl,fthk),skin),{castShadow:true}));
 
-  // 4本指
-  const fd=[
-    {x:fw*0.30,len:m.f_index||7.5,thk:m.tk_index||1.4},
-    {x:fw*0.10,len:m.f_middle||8.0,thk:m.tk_middle||1.5},
-    {x:-fw*0.10,len:m.f_ring||7.5,thk:m.tk_ring||1.4},
-    {x:-fw*0.32,len:(m.f_ring||7.5)*0.82,thk:(m.tk_ring||1.4)*0.82},
+  // 掌：手首側を細く、関節側を広くテーパー
+  const pg=new THREE.BoxGeometry(fw*0.88,fl,fthk,2,6,2);
+  const pp=pg.attributes.position;
+  for(let i=0;i<pp.count;i++){
+    const t=Math.max(0,Math.min(1,(pp.getY(i)+fl/2)/fl));
+    pp.setX(i,pp.getX(i)*(0.82+t*0.18));
+    pp.setZ(i,pp.getZ(i)*(0.68+t*0.32));
+  }
+  pp.needsUpdate=true;pg.computeVertexNormals();
+  hand.add(new THREE.Mesh(pg,skinM));
+
+  // 2点間のシリンダーを生成するヘルパー
+  function seg(p0,p1,r0,r1,mat){
+    const A=new THREE.Vector3(p0[0],p0[1],p0[2]);
+    const B=new THREE.Vector3(p1[0],p1[1],p1[2]);
+    const d=B.clone().sub(A);
+    const len=d.length();
+    if(len<0.01)return;
+    const mid=A.clone().add(d.clone().multiplyScalar(0.5));
+    const g=new THREE.CylinderGeometry(r1,r0,len,10);
+    const ms=new THREE.Mesh(g,mat);
+    ms.position.copy(mid);
+    ms.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
+    hand.add(ms);
+  }
+  function sph(p,r,mat){
+    const ms=new THREE.Mesh(new THREE.SphereGeometry(r,9,7),mat);
+    ms.position.set(p[0],p[1],p[2]);hand.add(ms);
+  }
+
+  // 4本指（小指・薬指・中指・人差し指）：3セグメント化
+  // sp=指先方向への広がり角（度）、curl=前方へのカール量
+  const fingerDefs=[
+    {x:-fw*0.34,len:(m.f_ring||7.5)*0.82,thk:(m.tk_ring||1.4)*0.82,sp:-7,curl:1.3},
+    {x:-fw*0.12,len:m.f_ring||7.5,        thk:m.tk_ring||1.4,         sp:-2,curl:0.9},
+    {x: fw*0.07,len:m.f_middle||8,         thk:m.tk_middle||1.5,       sp: 0,curl:0.5},
+    {x: fw*0.27,len:m.f_index||7.5,        thk:m.tk_index||1.4,        sp: 5,curl:0.9},
   ];
-  fd.forEach(f=>{
+  fingerDefs.forEach(f=>{
     const r=f.thk/2;
-    const fm=new THREE.Mesh(new THREE.CylinderGeometry(r*0.78,r,f.len,12),skin.clone());
-    fm.position.set(f.x,fl/2+f.len/2,0);hand.add(fm);
-    const km=new THREE.Mesh(new THREE.SphereGeometry(r*1.05,10,8),skin);
-    km.position.set(f.x,fl/2,0);hand.add(km);
+    const sr=f.sp*Math.PI/180;
+    const l1=f.len*0.45,l2=f.len*0.32,l3=f.len*0.23;
+    // 各関節の3D座標（自然なカールをZ方向で表現）
+    const j0=[f.x,fl/2,0];
+    const j1=[f.x+Math.sin(sr)*l1, fl/2+Math.cos(sr)*l1, -f.curl*0.12];
+    const j2=[j1[0]+Math.sin(sr*0.3)*l2, j1[1]+Math.cos(sr*0.3)*l2, j1[2]-f.curl*0.22];
+    const j3=[j2[0], j2[1]+l3, j2[2]-f.curl*0.18];
+    // 3本のセグメント（根元が太く、指先が細い）
+    seg(j0,j1,r,r*0.93,skinM);
+    seg(j1,j2,r*0.93,r*0.83,skinM);
+    seg(j2,j3,r*0.83,r*0.62,skinM);
+    // 関節球（指節間関節・掌指節）
+    sph(j0,r*1.08,darkM);
+    sph(j1,r*0.96,darkM);
+    sph(j2,r*0.86,darkM);
+    sph(j3,r*0.62,skinM);
   });
-  // 親指
-  const tr=(m.tk_thumb||1.8)/2;
-  const tm=new THREE.Mesh(new THREE.CylinderGeometry(tr*0.75,tr,m.f_thumb||6.0,12),skin.clone());
-  tm.rotation.z=Math.PI/2.8;tm.position.set(fw*0.58,-fl*0.18,0);hand.add(tm);
-  // 手首
-  const wm=new THREE.Mesh(new THREE.CylinderGeometry(fw*0.36,fw*0.44,fl*0.28,16),skin);
-  wm.position.set(0,-fl/2-fl*0.14,0);hand.add(wm);
 
-  // グリッド
+  // 親指：2セグメント、斜め外向き
+  const tr=(m.tk_thumb||1.8)/2;
+  const tl=m.f_thumb||6;
+  // 母指球（手の平の親指側の膨らみ）
+  const the=new THREE.Mesh(new THREE.SphereGeometry(fw*0.15,8,6),skinM);
+  the.scale.set(1,1.5,0.9);the.position.set(fw*0.38,-fl*0.1,0);hand.add(the);
+  const tj0=[fw*0.42,-fl*0.2,0];
+  // 基節：外側＆やや上方向へ（自然な開き角55度相当）
+  const tj1=[tj0[0]+tl*0.55*0.82, tj0[1]+tl*0.55*0.57, 0.25];
+  // 末節：さらに上方向へ曲がる
+  const tj2=[tj1[0]+tl*0.45*0.6, tj1[1]+tl*0.45*0.8, 0.45];
+  seg(tj0,tj1,tr,tr*0.86,skinM);
+  seg(tj1,tj2,tr*0.86,tr*0.66,skinM);
+  sph(tj0,tr*1.1,darkM);
+  sph(tj1,tr*0.9,darkM);
+  sph(tj2,tr*0.66,skinM);
+
+  // 手首（手掌から連続するテーパー円柱）
+  seg([0,-fl/2,0],[0,-fl/2-fl*0.28,0],fw*0.43,fw*0.36,skinM);
+  sph([0,-fl/2,0],fw*0.24,skinM);
+
   const grid=new THREE.GridHelper(40,20,0x222244,0x1a1a33);
-  grid.position.y=-fl/2-fl*0.28-1;scene.add(grid);
+  grid.position.y=-fl/2-fl*0.3-1;scene.add(grid);
   scene.add(hand);
 
-  // タッチ・マウス回転
-  let sx=0,sy=0,drag=false,rx=0.15,ry=0.3,zoom=28,lpd=0;
+  // インタラクション（ドラッグ回転・ピンチズーム・アイドル時オートスピン）
+  let sx=0,sy=0,drag=false,rx=0.12,ry=0,zoom=26,lpd=0,lastAct=0;
   const cv=_3dRenderer.domElement;
-  cv.addEventListener('pointerdown',e=>{drag=true;sx=e.clientX;sy=e.clientY;});
+  cv.addEventListener('pointerdown',e=>{drag=true;sx=e.clientX;sy=e.clientY;lastAct=Date.now();});
   cv.addEventListener('pointermove',e=>{
     if(!drag)return;
     ry+=(e.clientX-sx)*0.012;rx+=(e.clientY-sy)*0.006;
-    rx=Math.max(-0.4,Math.min(1.0,rx));sx=e.clientX;sy=e.clientY;
+    rx=Math.max(-0.4,Math.min(1.0,rx));sx=e.clientX;sy=e.clientY;lastAct=Date.now();
   });
-  cv.addEventListener('pointerup',()=>drag=false);
+  cv.addEventListener('pointerup',()=>{drag=false;lastAct=Date.now();});
   cv.addEventListener('touchmove',e=>{
     if(e.touches.length===2){
       const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
       if(lpd)zoom=Math.max(14,Math.min(52,zoom-(d-lpd)*0.12));
-      lpd=d;e.preventDefault();
+      lpd=d;e.preventDefault();lastAct=Date.now();
     }
   },{passive:false});
-  cv.addEventListener('touchend',()=>lpd=0);
+  cv.addEventListener('touchend',()=>{lpd=0;lastAct=Date.now();});
   cv.addEventListener('wheel',e=>{zoom=Math.max(14,Math.min(52,zoom+e.deltaY*0.05));},{passive:true});
 
   (function animate(){
     _3dAnimId=requestAnimationFrame(animate);
+    // 2秒間操作がなければゆっくりオートスピン
+    if(!drag&&Date.now()-lastAct>2000)ry+=0.006;
     hand.rotation.y=ry;hand.rotation.x=rx;
     camera.position.z=zoom;
     _3dRenderer.render(scene,camera);
