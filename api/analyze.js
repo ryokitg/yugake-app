@@ -7,8 +7,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { image, prompt } = req.body;
+    const { image, image_side, prompt } = req.body;
     if (!image || !prompt) return res.status(400).json({ error: 'missing params' });
+
+    const content = [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+    ];
+
+    if (image_side) {
+      content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image_side } });
+    }
+
+    content.push({ type: 'text', text: prompt });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -18,12 +28,9 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 400,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
-          { type: 'text', text: prompt }
-        ]}]
+        model: 'claude-sonnet-4-6',
+        max_tokens: 700,
+        messages: [{ role: 'user', content }]
       })
     });
 
@@ -31,7 +38,7 @@ export default async function handler(req, res) {
     if (!response.ok) return res.status(500).json({ error: data.error?.message || 'API error' });
 
     const raw = data.content.map(b => b.text || '').join('');
-    const match = raw.match(/\{[^}]+\}/);
+    const match = raw.match(/\{[\s\S]*?\}/);
     if (!match) return res.status(500).json({ error: 'no JSON: ' + raw.substring(0, 80) });
 
     const parsed = JSON.parse(match[0]);
